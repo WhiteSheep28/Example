@@ -12,24 +12,27 @@ LPDIRECT3DVERTEXBUFFER9 g_pVB = NULL;
 
 struct CUSTOMVERTEX
 {
-    FLOAT X, Y, Z, RHW;
-    DWORD Color;
+    FLOAT x, y, z;
+    DWORD color;
 };
 
 HRESULT InitVB()
 {
     CUSTOMVERTEX vertices[] =
     {
-        {-0.4f, 0.8f, 0.0f},
-        {0.0f, -0.8f, 0.0f},
-        {-0.8f, -0.8f, 0.0f}
+        {-0.4f, 0.8f, 0.0f, 0xffff0000, },
+        {0.0f, -0.8f, 0.0f, 0xff00ff00, },
+        {-0.8f, -0.8f, 0.0f, 0xff00ffff, }
     };
 
-    g_pd3dDevice->CreateVertexBuffer(6 * 12, 0, D3DFVF_XYZ, D3DPOOL_DEFAULT, &g_pVB, NULL);
+    g_pd3dDevice->CreateVertexBuffer(3 * 12, 0, D3DFVF_XYZ | D3DFVF_DIFFUSE, D3DPOOL_DEFAULT, &g_pVB, NULL);
 
     VOID* pVertices;
 
     g_pVB->Lock(0, sizeof(vertices), (void**)&pVertices, 0);
+
+    memcpy(pVertices, vertices, sizeof(vertices));
+
     g_pVB->Unlock();
 
     return S_OK;
@@ -75,6 +78,8 @@ HRESULT InitD3D(HWND hWnd)
 VOID Cleanup()
 {
     // 해제 순서. 해제시 반드시 생성 순서의 역순으로 해제 해줄 것. 
+    if (g_pVB != NULL)
+        g_pVB->Release();
     if (g_pd3dDevice != NULL)
         g_pd3dDevice->Release();
     if (g_pD3D != NULL)
@@ -102,14 +107,14 @@ VOID Render()
     {
         // 실제 렌더링 명령들이 나열될 곳
         // TODO :     
-        D3DMATRIX tempTM;
-
+        D3DXMATRIX tempTM;
+        D3DXMatrixIdentity(&tempTM);
         g_pd3dDevice->SetTransform(D3DTS_WORLD, &tempTM);
         g_pd3dDevice->SetTransform(D3DTS_VIEW, &tempTM);
         g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &tempTM);
         
         g_pd3dDevice->SetStreamSource(0, g_pVB, 0, 12);
-        g_pd3dDevice->SetFVF(D3DFVF_XYZ);
+        g_pd3dDevice->SetFVF(D3DFVF_XYZ | D3DFVF_DIFFUSE);
         g_pd3dDevice->DrawPrimitive(D3DPT_TRIANGLELIST, 0, 2);
 
         g_pd3dDevice->EndScene();
@@ -162,6 +167,9 @@ INT WINAPI WinMain(HINSTANCE hInst, HINSTANCE, LPSTR, INT)
         // 윈도우 출력
         ShowWindow(hWnd, SW_SHOWDEFAULT);
         UpdateWindow(hWnd);
+        InitD3D(hWnd);
+        InitVB();
+
         // 메시지 루프
         MSG msg;
         while (GetMessage(&msg, NULL, 0, 0))
